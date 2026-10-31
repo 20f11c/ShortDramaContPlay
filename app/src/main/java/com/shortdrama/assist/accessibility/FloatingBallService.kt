@@ -1,3 +1,6 @@
+// 前台服务保活的思路参考 ad-auto（https://github.com/clarithromycine/ad-auto）：
+// MIUI/HyperOS 在服务被停后约 20 秒就不再派发无障碍事件，必须常驻一条低优先级通知。
+// 本项目为独立重写实现；移植清单与许可说明见仓库根目录 NOTICE.md。
 package com.shortdrama.assist.accessibility
 
 import android.app.Notification

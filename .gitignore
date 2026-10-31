@@ -15,3 +15,26 @@ keystore.properties
 keystore/
 *.jks
 *.keystore
+
+# 仓库只保留源代码与规则：文档草稿、取证日志、原型工具不入库
+/evidence/
+/tools/
+/prototype/
+/docs/00-*.md
+/docs/01-*.md
+/docs/02-*.md
+/docs/03-*.md
+/docs/04-*.md
+/docs/05-*.md
+/docs/06-*.md
+/docs/07-*.md
+/docs/08-*.md
+/docs/09-*.md
+/docs/10-*.md
+/docs/issues/
+/docs/mockups/
+/svc*.png
+/docs/profiles/
+# 根目录的临时抓图与 ui dump 不入库
+/*.png
+/*.xml

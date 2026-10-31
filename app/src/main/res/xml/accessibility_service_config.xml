@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   无障碍服务配置 - 短剧自动续播 + 广告跳过
-  
+
+  这套 flag 组合参考 ad-auto（https://github.com/clarithromycine/ad-auto），
+  移植说明见仓库根目录 NOTICE.md。
+
   flagReportViewIds：上报 view 资源 id（识别直播广告渲染视图需要）。
   flagIncludeNotImportantViews：**必须**带上——广告 SDK 会把广告浮层
   标记成"对无障碍不重要"，不带这个 flag 节点树里根本看不到它们。

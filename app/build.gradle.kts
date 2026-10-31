@@ -92,12 +92,5 @@ dependencies {
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 
-    // Shizuku：截图 + input 动作，不依赖无障碍服务
-    implementation("dev.rikka.shizuku:api:13.1.5")
-    implementation("dev.rikka.shizuku:provider:13.1.5")
-
-    // ML Kit 中文 OCR（bundled，无需联网下载模型）
-    implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
-
     testImplementation("junit:junit:4.13.2")
 }

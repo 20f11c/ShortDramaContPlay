@@ -10,10 +10,12 @@ import com.shortdrama.assist.DevLog
  * 短剧自动续播 + 广告跳过 无障碍服务。
  *
  * 通过节点树检测片尾提示与广告特征，自动执行上滑/点击。
- * 相比 Shizuku + OCR 方案：
- * - 不需要 Shizuku/root，只需开启无障碍
- * - 直接读节点树，无需截图 OCR，延迟更低
+ * - 只需开启无障碍，不需要 root 或额外授权
+ * - 直接读节点树，不用截图识别，延迟更低
  * - 事件驱动 + 看门狗轮询，静止画面也能检测
+ *
+ * 检测策略与各项阈值参考了 ad-auto 项目
+ * （https://github.com/clarithromycine/ad-auto），移植说明见仓库根目录 NOTICE.md。
  */
 class AutoPlayAccessibilityService : AccessibilityService() {
 

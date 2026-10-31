@@ -1,3 +1,5 @@
+// 判定优先级与关键字表参考 ad-auto（https://github.com/clarithromycine/ad-auto），
+// 本项目为独立重写实现；移植清单与许可说明见仓库根目录 NOTICE.md。
 package com.shortdrama.assist.accessibility
 
 import android.graphics.Rect

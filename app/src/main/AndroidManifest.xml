@@ -8,10 +8,9 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
-    <!-- 只查询红果与 Shizuku（Android 11+ 包可见性） -->
+    <!-- 只查询红果（Android 11+ 包可见性） -->
     <queries>
         <package android:name="com.phoenix.read" />
-        <package android:name="moe.shizuku.privileged.api" />
     </queries>
 
     <application
@@ -23,7 +22,7 @@
         android:theme="@style/Theme.ShortDrama"
         tools:targetApi="36">
 
-        <!-- 入口：首页 / 设置 / OCR / 卡密 -->
+        <!-- 入口：首页 / 订阅 / 设置 -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -35,7 +34,7 @@
             </intent-filter>
         </activity>
 
-        <!-- 无障碍服务：片尾续播 + 广告跳过（主方案，无需 Shizuku） -->
+        <!-- 无障碍服务：片尾续播 + 广告跳过（唯一自动化通道） -->
         <service
             android:name=".accessibility.AutoPlayAccessibilityService"
             android:exported="true"
@@ -60,25 +59,5 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Keep the accessibility-driven short-drama auto-continue service alive in background" />
         </service>
-
-        <!-- Shizuku OCR（备选方案）：前台服务常驻执行截图/OCR/动作 -->
-        <service
-            android:name=".ocr.OcrAutomationService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse"
-            android:stopWithTask="false"
-            tools:targetApi="36">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="User-initiated on-device short-drama auto-continue through Shizuku screenshot and OCR" />
-        </service>
-
-        <provider
-            android:name="rikka.shizuku.ShizukuProvider"
-            android:authorities="${applicationId}.shizuku"
-            android:enabled="true"
-            android:exported="true"
-            android:multiprocess="false"
-            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
     </application>
 </manifest>

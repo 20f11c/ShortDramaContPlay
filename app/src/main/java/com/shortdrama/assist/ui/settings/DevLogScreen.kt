@@ -49,7 +49,7 @@ import kotlinx.coroutines.delay
 /**
  * 开发者模式：控制内存日志记录，并查看/复制/分享日志。
  *
- * 日志只保留在 App 进程内存中，最多 [DevLog.MAX_ENTRIES] 条，便于用户自助排查 OCR/Shizuku 问题。
+ * 日志只保留在 App 进程内存中，最多 [DevLog.MAX_ENTRIES] 条，便于用户自助排查规则命中与权限问题。
  */
 @Composable
 fun DevLogScreen(
@@ -121,7 +121,7 @@ fun DevLogScreen(
                             Spacer(Modifier.height(3.dp))
                             Text(
                                 text = if (enabled) {
-                                    "正在记录 OCR / Shizuku 运行事件"
+                                    "正在记录规则命中与运行事件"
                                 } else {
                                     "开启后可在 App 内查看和导出"
                                 },
@@ -214,7 +214,7 @@ fun DevLogScreen(
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
                             text = if (enabled) {
-                                "等待日志…启动 OCR 后会自动记录"
+                                "等待日志…触发一次动作后会自动记录"
                             } else {
                                 "开发者日志未开启"
                             },

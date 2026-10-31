@@ -106,10 +106,10 @@ object DevLogOverlay {
         val landscape = context.resources.configuration.orientation ==
             Configuration.ORIENTATION_LANDSCAPE
         return if (landscape) {
-            // 横屏 OCR 只截右上角；日志放底部，避免被截进识别区。
+            // 横屏时播放器控件在右上角，日志放底部避免挡住它。
             Gravity.BOTTOM or Gravity.START
         } else {
-            // 竖屏 OCR 只截底部；日志放顶部。
+            // 竖屏时片尾提示在底部，日志放顶部。
             Gravity.TOP or Gravity.START
         }
     }
@@ -214,8 +214,8 @@ object DevLogOverlay {
     }
 
     /**
-     * 悬浮日志本身会出现在整屏截图里。即使业务日志已经不再打印触发词，
-     * 这里再做一次兜底，避免任何历史日志把关键词重新带回 OCR。
+     * 悬浮日志本身会画在播放器上方，把片尾提示的原文替换成描述，
+     * 避免日志窗口里的文字反过来干扰页面文本判据。
      */
     private fun safeForOverlay(message: String): String = message
         .replace("上滑继续观看短剧", "片尾提示")

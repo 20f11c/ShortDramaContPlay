@@ -44,15 +44,12 @@ import com.shortdrama.assist.ui.home.PermissionRow
 import com.shortdrama.assist.ui.home.StatItem
 import com.shortdrama.assist.ui.settings.A11yScreen
 import com.shortdrama.assist.ui.settings.DevLogScreen
-import com.shortdrama.assist.ui.settings.OcrScreen
 import com.shortdrama.assist.ui.settings.SettingsScreen
 import com.shortdrama.assist.ui.subscribe.AddSubscribeSheet
 import com.shortdrama.assist.ui.subscribe.SubscribeDetailScreen
 import com.shortdrama.assist.ui.subscribe.SubscribeScreen
 import com.shortdrama.assist.ui.theme.ShortDramaTheme
 import com.shortdrama.assist.ui.recharge.RechargeScreen
-import com.shortdrama.assist.ocr.OcrAutomationService
-import com.shortdrama.assist.ocr.ShizukuBridge
 import com.shortdrama.assist.ui.theme.LocalTokens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -82,7 +79,6 @@ private enum class Screen {
     SETTINGS,
     DEVLOG,
     A11Y,
-    OCR,
     RECHARGE,
 }
 
@@ -90,7 +86,6 @@ private fun String?.toScreen(): Screen = when (this?.lowercase(Locale.US)) {
     "subscribe" -> Screen.SUBSCRIBE
     "settings" -> Screen.SETTINGS
     "a11y" -> Screen.A11Y
-    "ocr" -> Screen.OCR
     "devlog" -> Screen.DEVLOG
     "recharge" -> Screen.RECHARGE
     else -> Screen.HOME
@@ -98,7 +93,7 @@ private fun String?.toScreen(): Screen = when (this?.lowercase(Locale.US)) {
 
 private fun Screen.toTab(): AppTab = when (this) {
     Screen.SUBSCRIBE, Screen.SUBSCRIBE_DETAIL -> AppTab.SUBSCRIBE
-    Screen.SETTINGS, Screen.DEVLOG, Screen.A11Y, Screen.OCR, Screen.RECHARGE -> AppTab.SETTINGS
+    Screen.SETTINGS, Screen.DEVLOG, Screen.A11Y, Screen.RECHARGE -> AppTab.SETTINGS
     Screen.HOME -> AppTab.HOME
 }
 
@@ -401,25 +396,6 @@ private fun AppRoot(debugScreen: String? = null) {
                             )
 
                             Screen.A11Y -> A11yScreen(onBack = { screen = Screen.SETTINGS })
-
-                            Screen.OCR -> OcrScreen(
-                                enabled = AppSettings.isOcrMode(ctx),
-                                targetInstalled = targetInstalled,
-                                onToggle = { on ->
-                                    if (!on) {
-                                        AppSettings.setOcrMode(ctx, false)
-                                        OcrAutomationService.stop(ctx)
-                                    } else if (!targetInstalled) {
-                                        toast(ctx, "红果未安装")
-                                    } else if (!ShizukuBridge.hasPermission()) {
-                                        toast(ctx, "请先授权 Shizuku")
-                                    } else {
-                                        AppSettings.setOcrMode(ctx, true)
-                                        OcrAutomationService.start(ctx)
-                                    }
-                                },
-                                onBack = { screen = Screen.SETTINGS },
-                            )
 
                             Screen.RECHARGE -> RechargeScreen(
                                 input = "",

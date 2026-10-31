@@ -8,7 +8,6 @@ object AppSettings {
     private const val PREFS = "sd_settings"
 
     private const val KEY_DARK = "dark_mode_override"
-    private const val KEY_OCR_MODE = "shizuku_ocr_mode"
     private const val KEY_A11Y_MODE = "accessibility_mode"
     private const val KEY_AD_SKIP = "ad_skip_enabled"
     private const val KEY_AUTO_CONTINUE = "auto_continue_enabled"
@@ -17,19 +16,12 @@ object AppSettings {
         ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     // === 自动化模式 ===
-    
-    /** 无障碍模式（推荐）：使用无障碍服务检测片尾和广告。 */
+
+    /** 无障碍模式：使用无障碍服务检测片尾和广告。 */
     fun isA11yMode(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_A11Y_MODE, true)
 
     fun setA11yMode(ctx: Context, value: Boolean) {
         prefs(ctx).edit().putBoolean(KEY_A11Y_MODE, value).apply()
-    }
-
-    /** Shizuku OCR 模式（备选）：截图 + OCR 判定。 */
-    fun isOcrMode(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_OCR_MODE, false)
-
-    fun setOcrMode(ctx: Context, value: Boolean) {
-        prefs(ctx).edit().putBoolean(KEY_OCR_MODE, value).apply()
     }
 
     // === 功能开关 ===

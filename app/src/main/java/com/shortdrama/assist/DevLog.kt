@@ -91,9 +91,9 @@ object DevLog {
 
     /**
      * 标准化事件日志：`[分类] 中文描述`。
-     * 分类固定使用小写英文：app / ocr / shizuku / ad / end / play / verify / unknown / action / error。
+     * 分类固定使用小写英文：app / a11y / rule / ad / end / play / verify / unknown / action / error。
      */
-    fun event(category: String, message: String, tag: String = "SDOcr") =
+    fun event(category: String, message: String, tag: String = "SDLog") =
         i(tag, "[$category] $message")
 
     fun log(level: Char, tag: String, message: String, throwable: Throwable?) {
