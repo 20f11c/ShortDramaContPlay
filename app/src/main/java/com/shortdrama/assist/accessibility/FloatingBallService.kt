@@ -54,6 +54,8 @@ class FloatingBallService : Service() {
         private const val CHANNEL_ID = "sd_accessibility_keepalive"
         private const val TAG = "SDFloatingBall"
         private const val PREFS = "sd_overlay"
+        /** 位置版本：默认落点换代时 +1，老用户的一次性重置到新默认位置。 */
+        private const val POS_VERSION = 2
 
         @Volatile
         var instance: FloatingBallService? = null
@@ -160,10 +162,16 @@ class FloatingBallService : Service() {
             val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
             val w = screenWidth()
             val h = screenHeight()
-            val defX = (w - size - dp(8)).coerceAtLeast(0)
-            val defY = (h * 0.55f).toInt()
-            x = prefs.getInt("x", defX).coerceIn(0, (w - size).coerceAtLeast(0))
-            y = prefs.getInt("y", defY).coerceIn(0, (h - size).coerceAtLeast(0))
+            // 默认贴左边、纵向 70%：右侧那片是点赞/评论/分享的互动区，也是滑动动线，
+            // 放右边容易误触。用户拖动过之后以记住的位置为准。
+            val defX = dp(6)
+            val defY = (h * 0.70f).toInt()
+            val posVer = prefs.getInt("pos_ver", 0)
+            val storedX = if (posVer >= POS_VERSION) prefs.getInt("x", defX) else defX
+            val storedY = if (posVer >= POS_VERSION) prefs.getInt("y", defY) else defY
+            x = storedX.coerceIn(0, (w - size).coerceAtLeast(0))
+            y = storedY.coerceIn(0, (h - size).coerceAtLeast(0))
+            if (posVer < POS_VERSION) prefs.edit().putInt("pos_ver", POS_VERSION).apply()
         }
         val view = BallView(this)
         view.alpha = if (getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("dim", false)) 0.35f else 1f
@@ -211,6 +219,8 @@ class FloatingBallService : Service() {
         getSharedPreferences(PREFS, MODE_PRIVATE).edit()
             .putInt("x", x)
             .putInt("y", y)
+            // 记下位置版本，避免下次启动又被「新默认位置」覆盖掉用户拖出来的位置
+            .putInt("pos_ver", POS_VERSION)
             .apply {
                 if (dim) putBoolean("dim", true)
             }
