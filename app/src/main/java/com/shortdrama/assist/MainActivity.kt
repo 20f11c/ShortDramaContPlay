@@ -37,6 +37,7 @@ import com.shortdrama.assist.rules.RuleStore
 import com.shortdrama.assist.rules.RuleSubscription
 import com.shortdrama.assist.rules.StatsStore
 import com.shortdrama.assist.rules.SubscriptionStore
+import com.shortdrama.assist.ui.components.AppIcons
 import com.shortdrama.assist.ui.components.AppTab
 import com.shortdrama.assist.ui.components.BottomTabs
 import com.shortdrama.assist.ui.home.HomeScreen
@@ -258,10 +259,11 @@ private fun AppRoot(debugScreen: String? = null) {
                                     ),
                                 ),
                                 stats = statsRows.take(4).mapIndexed { index, row ->
+                                    val label = AppIcons.label(ctx, row.packageName, row.label)
                                     StatItem(
-                                        label = row.label,
+                                        label = label,
                                         packageName = row.packageName,
-                                        short = row.label.take(1),
+                                        short = label.take(1),
                                         count = row.count,
                                         color = STAT_COLORS[index % STAT_COLORS.size],
                                     )

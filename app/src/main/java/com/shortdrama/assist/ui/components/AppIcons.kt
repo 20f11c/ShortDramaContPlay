@@ -22,8 +22,26 @@ import kotlinx.coroutines.withContext
 object AppIcons {
 
     private val cache = LruCache<String, ImageBitmap>(24)
+    private val labelCache = LruCache<String, String>(24)
 
     fun cached(pkg: String): ImageBitmap? = if (pkg.isEmpty()) null else cache.get(pkg)
+
+    /**
+     * 目标 App 的显示名（桌面上那个名字）。
+     *
+     * 统计里存的是「命中当时记录的短名」（比如「红果」），装上/改名后就不准了；
+     * 这里优先用系统里的真实名字，取不到才退回调用方给的 fallback。
+     */
+    fun label(ctx: Context, pkg: String, fallback: String): String {
+        if (pkg.isEmpty()) return fallback
+        labelCache.get(pkg)?.let { return it }
+        return runCatching {
+            val info = ctx.packageManager.getApplicationInfo(pkg, 0)
+            info.loadLabel(ctx.packageManager).toString()
+                .takeIf { it.isNotBlank() }
+                ?.also { labelCache.put(pkg, it) }
+        }.getOrNull() ?: fallback
+    }
 
     /**
      * 取图标并缩放到 [sizePx]。
