@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 无 ActionBar + 透明系统栏：内容自己处理边到边（enableEdgeToEdge）。
+         windowBackground 必须是不透明色 —— 透明窗口会让其它 App 的 SurfaceView
+         图层穿透显示（实测红果的视频画面会浮在我们页面中间）。 -->
+    <style name="Theme.ShortDrama" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#FFF2F2F7</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

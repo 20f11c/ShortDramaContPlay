@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "name": "红果免费短剧",
+  "package": "com.phoenix.read",
+  "version": "2026.10.31",
+  "minAppVersion": "1.4.0",
+  "homepage": "https://github.com/20f11c/ShortDramaContPlay",
+  "rules": [
+    {
+      "id": "end-card-continue",
+      "note": "片尾出现「上滑继续观看」类文案 → 上滑进入下一集",
+      "type": "pageText",
+      "anchor": {
+        "any": ["上滑继续观看", "待续播", "下一集", "即将播放", "精彩继续", "下集预告", "更多好剧", "继续观看", "自动播放"]
+      },
+      "action": "swipeUp",
+      "immediate": true
+    },
+    {
+      "id": "interstitial-countdown",
+      "note": "插屏广告倒计时（如「8秒后可继续上滑观看短剧」）→ 等它数完，不动作",
+      "type": "pageText",
+      "anchor": {
+        "regex": ["\\d+\\s*秒后可继续"]
+      },
+      "action": "wait"
+    },
+    {
+      "id": "live-ad-render-view",
+      "note": "直播带货广告的渲染视图 → 上滑划过",
+      "type": "viewId",
+      "anchor": {
+        "any": ["ttlive_player_render_view"]
+      },
+      "action": "swipeUp",
+      "cooldownMs": 6000
+    },
+    {
+      "id": "ad-container",
+      "note": "已确认的广告容器 ID → 上滑划过",
+      "type": "viewId",
+      "anchor": {
+        "any": ["ay0", "i0t"]
+      },
+      "action": "swipeUp",
+      "cooldownMs": 3000
+    },
+    {
+      "id": "playable-ad-texture",
+      "note": "试玩广告：渲染视图 + 页面上几乎没有可读文案（正剧播放器至少有选集/倍速）",
+      "type": "className",
+      "anchor": {
+        "contains": ["TextureView"],
+        "maxPageTextLen": 24
+      },
+      "action": "swipeUp",
+      "cooldownMs": 3000
+    },
+    {
+      "id": "skip-button",
+      "note": "跳过 / 关闭 / 知道了 —— 只点小面积按钮，不点整页创意",
+      "type": "clickText",
+      "anchor": {
+        "any": ["跳过", "关闭", "知道了", "我知道了"],
+        "maxWidthRatio": 0.28,
+        "maxHeightRatio": 0.10
+      },
+      "action": "click",
+      "cooldownMs": 1500
+    },
+    {
+      "id": "ad-badge",
+      "note": "右上角「广告」角标 —— 仅作识别，不产生动作",
+      "type": "adBadge",
+      "anchor": {
+        "any": ["广告"],
+        "region": "topRight"
+      },
+      "action": "none"
+    },
+    {
+      "id": "sparse-fallback",
+      "note": "兜底：节点稀疏 + 无有效文案 + 无播放控件 → 判为广告页，需 800ms 持续成立",
+      "type": "sparse",
+      "anchor": {
+        "maxNodes": 50,
+        "maxPageTextLen": 20
+      },
+      "action": "swipeUp",
+      "confirmMs": 800,
+      "cooldownMs": 3000
+    }
+  ]
+}

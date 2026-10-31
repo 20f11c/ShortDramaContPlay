@@ -1,0 +1,17 @@
+﻿*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+/app/build
+
+# 正式版签名：绝不进版本库
+keystore.properties
+keystore/
+*.jks
+*.keystore

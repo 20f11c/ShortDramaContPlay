@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 亮色下状态栏图标要转深色；enableEdgeToEdge 会按系统深色设置选择这一套。
+         同 values/themes.xml：windowBackground 必须不透明，否则其它 App 的
+         SurfaceView 图层会穿透（红果视频画面浮在我们页面上）。 -->
+    <style name="Theme.ShortDrama" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#FF000000</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

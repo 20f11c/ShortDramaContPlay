@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  调试版专用文案：覆盖 main 里的同名资源。
+  这样调试版和正式版能同时装在手机上，桌面图标分得清。
+  正式版不包含这个目录。
+-->
+<resources>
+    <string name="app_name">续播 调试版</string>
+</resources>

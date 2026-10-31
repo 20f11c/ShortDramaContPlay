@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  无障碍服务配置 - 短剧自动续播 + 广告跳过
+  
+  flagReportViewIds：上报 view 资源 id（识别直播广告渲染视图需要）。
+  flagIncludeNotImportantViews：**必须**带上——广告 SDK 会把广告浮层
+  标记成"对无障碍不重要"，不带这个 flag 节点树里根本看不到它们。
+  canTakeScreenshot：横屏时正剧控件会被隐藏，需要用截图+颜色统计判断广告按钮（API 30+）。
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows|flagReportViewIds|flagIncludeNotImportantViews"
+    android:canPerformGestures="true"
+    android:canRetrieveWindowContent="true"
+    android:canTakeScreenshot="true"
+    android:description="@string/accessibility_service_desc"
+    android:notificationTimeout="100"
+    android:settingsActivity="com.shortdrama.assist.MainActivity" />

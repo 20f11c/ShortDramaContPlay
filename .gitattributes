@@ -1,0 +1,15 @@
+# 统一按 LF 存储，避免 Windows/CI 之间产生行尾噪音。
+# 注意：PowerShell 5.1 可以正常执行 LF 换行的 .ps1，
+# 且 tools/*.ps1 必须保留 UTF-8 BOM（否则中文会被按 GBK 解析）。
+* text=auto eol=lf
+
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.jar  binary
+*.apk  binary
+*.aab  binary
+*.keystore binary
+*.jks  binary
