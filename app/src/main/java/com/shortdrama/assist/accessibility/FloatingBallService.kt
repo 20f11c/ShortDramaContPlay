@@ -141,11 +141,10 @@ class FloatingBallService : Service() {
 
     private fun addBall() {
         if (ball != null) return
-        val width = ballW()
-        val height = ballH()
+        val size = dp(44)
         val p = WindowManager.LayoutParams(
-            width,
-            height,
+            size,
+            size,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             } else {
@@ -161,10 +160,10 @@ class FloatingBallService : Service() {
             val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
             val w = screenWidth()
             val h = screenHeight()
-            val defX = (w - width - dp(6)).coerceAtLeast(0)
+            val defX = (w - size - dp(8)).coerceAtLeast(0)
             val defY = (h * 0.55f).toInt()
-            x = prefs.getInt("x", defX).coerceIn(0, (w - width).coerceAtLeast(0))
-            y = prefs.getInt("y", defY).coerceIn(0, (h - height).coerceAtLeast(0))
+            x = prefs.getInt("x", defX).coerceIn(0, (w - size).coerceAtLeast(0))
+            y = prefs.getInt("y", defY).coerceIn(0, (h - size).coerceAtLeast(0))
         }
         val view = BallView(this)
         view.alpha = if (getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("dim", false)) 0.35f else 1f
@@ -228,23 +227,21 @@ class FloatingBallService : Service() {
     // ---------------------------------------------------------------- 贴边半隐藏
 
     /** 半隐藏时露在外面的宽度：够点、又基本不挡画面。 */
-    private fun revealPx(): Int = dp(13)
+    private fun revealPx(): Int = dp(20)
 
-    private fun ballW(): Int = dp(26)
-
-    private fun ballH(): Int = dp(64)
+    private fun ballSize(): Int = dp(44)
 
     private fun dockedRight(): Boolean {
         val p = params ?: return true
-        return p.x + ballW() / 2 >= screenWidth() / 2
+        return p.x + ballSize() / 2 >= screenWidth() / 2
     }
 
     private fun expandedX(): Int =
-        if (dockedRight()) (screenWidth() - ballW() - dp(6)).coerceAtLeast(0) else dp(6)
+        if (dockedRight()) (screenWidth() - ballSize() - dp(8)).coerceAtLeast(0) else dp(8)
 
-    /** 半隐藏：把窗口推到屏幕外，只留一小条。窗口窄了触摸区域也跟着窄，不会误触。 */
+    /** 半隐藏：把窗口推到屏幕外，只留一小条弧边。窗口窄了触摸区域也跟着窄，不会误触。 */
     private fun collapsedX(): Int =
-        if (dockedRight()) screenWidth() - revealPx() else revealPx() - ballW()
+        if (dockedRight()) screenWidth() - revealPx() else revealPx() - ballSize()
 
     private fun animateX(target: Int, onEnd: (() -> Unit)? = null) {
         val p = params ?: return
@@ -351,9 +348,9 @@ class FloatingBallService : Service() {
             x = if (onRight) {
                 ((ball?.x ?: screenWidth()) - w - dp(8))
             } else {
-                ((ball?.x ?: 0) + ballW() + dp(8))
+                ((ball?.x ?: 0) + ballSize() + dp(8))
             }.coerceIn(dp(4), (screenWidth() - w - dp(4)).coerceAtLeast(dp(4)))
-            val cy = (ball?.y ?: (screenHeight() / 2)) + ballH() / 2
+            val cy = (ball?.y ?: (screenHeight() / 2)) + ballSize() / 2
             y = (cy - height / 2).coerceIn(dp(56), (screenHeight() - height - dp(96)).coerceAtLeast(dp(56)))
         }
 
@@ -497,48 +494,37 @@ class FloatingBallService : Service() {
             color = Color.WHITE
         }
         private val glyphPath = Path()
-        private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            textAlign = Paint.Align.CENTER
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            textSize = dpF(11f)
-        }
 
         private fun paramsX(): Int = params?.x ?: 0
         private fun paramsY(): Int = params?.y ?: 0
 
         override fun onDraw(canvas: Canvas) {
-            val w = width.toFloat()
-            val h = height.toFloat()
-            val cx = w / 2f
+            val r = min(width, height) / 2f
+            val cx = width / 2f
+            val cy = height / 2f
             val running = AutoPlayAccessibilityService.isConnected()
-            val accent = if (running) 0xFF0A84FF.toInt() else 0xFF8E8E93.toInt()
-            val radius = w / 2f
 
-            // 竖长条底盘 + 同色描边
-            canvas.drawRoundRect(0f, 0f, w, h, radius, radius, bgPaint)
-            ringPaint.color = accent
-            canvas.drawRoundRect(
-                dpF(1f), dpF(1f), w - dpF(1f), h - dpF(1f), radius, radius, ringPaint
-            )
+            // 底盘
+            canvas.drawCircle(cx, cy, r - dpF(1.5f), bgPaint)
 
-            // 竖排两个字：续 / 播。半隐藏时把字挪到露出来的那一半里，否则只剩半个字
-            val textCx = if (!collapsed) {
-                cx
-            } else if (dockedRight()) {
-                revealPx() / 2f
-            } else {
-                w - revealPx() / 2f
-            }
-            textPaint.color = if (running) Color.WHITE else 0xFFB8B8BE.toInt()
-            val gap = dpF(11.5f)
-            val baseline = h / 2f + textPaint.textSize / 3f
-            canvas.drawText("续", textCx, baseline - gap, textPaint)
-            canvas.drawText("播", textCx, baseline + gap, textPaint)
+            // 外圈：运行中蓝色，未连接灰
+            ringPaint.color = if (running) 0xFF0A84FF.toInt() else 0xFF8E8E93.toInt()
+            canvas.drawCircle(cx, cy, r - dpF(2.5f), ringPaint)
 
-            // 顶上一个绿点，表示无障碍已连接
+            // 中间一个播放三角（回 App 的暗示），颜色跟外圈一致更统一
+            glyphPaint.color = if (running) 0xFF0A84FF.toInt() else 0xFF8E8E93.toInt()
+            val s = r * 0.42f
+            glyphPath.reset()
+            glyphPath.moveTo(cx - s * 0.6f, cy - s)
+            glyphPath.lineTo(cx + s * 0.95f, cy)
+            glyphPath.lineTo(cx - s * 0.6f, cy + s)
+            glyphPath.close()
+            canvas.drawPath(glyphPath, glyphPaint)
+
+            // 运行中的小绿点，弱化但可辨
             if (running) {
                 val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF34C759.toInt() }
-                canvas.drawCircle(cx, dpF(7f), dpF(2.4f), dot)
+                canvas.drawCircle(width - dpF(10f), dpF(10f), dpF(3.2f), dot)
             }
         }
 
