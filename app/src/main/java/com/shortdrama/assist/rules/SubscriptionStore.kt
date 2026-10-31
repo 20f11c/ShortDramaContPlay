@@ -43,7 +43,13 @@ object SubscriptionStore {
             }
         }
         // 数组里有东西但一条都解不出来 = 数据被写坏了，同样退回默认值。
-        if (migrated.isEmpty() && arr.length() > 0) listOf(defaults()) else migrated
+        if (migrated.isEmpty() && arr.length() > 0) {
+            listOf(defaults())
+        } else {
+            // 迁移结果立刻落盘，否则每次启动都要重新迁一遍、且旧地址一直留在存储里。
+            if (migrated != list) save(ctx, migrated)
+            migrated
+        }
     }.getOrElse { listOf(defaults()) }
 
     fun save(ctx: Context, list: List<RuleSubscription>) {

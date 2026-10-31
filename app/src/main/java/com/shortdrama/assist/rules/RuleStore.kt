@@ -25,9 +25,6 @@ object RuleStore {
     const val OFFICIAL_URL_FALLBACK =
         "https://raw.githubusercontent.com/20f11c/ShortDramaContPlay/main/rules/com.phoenix.read.json"
 
-    /** 只有这个前缀才回退到 raw：换别的镜像等于替用户猜地址。 */
-    private const val OFFICIAL_CDN_PREFIX = "https://cdn.jsdelivr.net/gh/20f11c/ShortDramaContPlay"
-
     private const val CACHE_DIR = "rules"
     private const val BUILT_IN_PATH = "rules/com.phoenix.read.json"
     private const val META_SUFFIX = ".meta"
@@ -116,7 +113,9 @@ object RuleStore {
     private fun downloadWithFallback(url: String): String {
         val first = runCatching { download(url) }
         first.getOrNull()?.let { return it }
-        if (!url.startsWith(OFFICIAL_CDN_PREFIX)) {
+        // 只有「原样的官方主地址」才回退 raw。用户把地址改过（改名、换源、加参数）之后
+        // 还回退到官方文件，会出现「地址写着 A、数据其实来自 B」的假成功，必须让它如实报错。
+        if (url != OFFICIAL_URL_PRIMARY) {
             val cause = first.exceptionOrNull()?.message ?: "未知错误"
             throw IOException("下载失败：$cause")
         }
