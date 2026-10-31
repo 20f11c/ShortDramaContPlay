@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import com.shortdrama.assist.accessibility.A11yState
 import com.shortdrama.assist.accessibility.AutoPlayAccessibilityService
+import com.shortdrama.assist.accessibility.FloatingBallService
 import com.shortdrama.assist.rules.RuleEngine
 import com.shortdrama.assist.rules.RulePackage
 import com.shortdrama.assist.rules.RuleStore
@@ -148,6 +149,7 @@ private fun AppRoot(debugScreen: String? = null) {
         var addError by remember { mutableStateOf<String?>(null) }
         var statsTick by remember { mutableIntStateOf(0) }
         var devLogEnabled by remember { mutableStateOf(DevLog.isEnabled(ctx)) }
+        var floatingBallOn by remember { mutableStateOf(AppSettings.isFloatingBallEnabled(ctx)) }
         val scope = rememberCoroutineScope()
 
         val enabledCount = subscriptions.count { it.enabled }
@@ -252,10 +254,20 @@ private fun AppRoot(debugScreen: String? = null) {
                                         onClick = { openNotificationSettings(ctx) },
                                     ),
                                     PermissionRow(
-                                        title = "悬浮框",
-                                        value = if (overlayOk) "已授权" else "未授权",
-                                        granted = overlayOk,
-                                        onClick = { openOverlaySettings(ctx) },
+                                        title = "悬浮球",
+                                        value = when {
+                                            !overlayOk -> "未授权"
+                                            floatingBallOn -> "显示中"
+                                            else -> "已关闭"
+                                        },
+                                        granted = overlayOk && floatingBallOn,
+                                        onClick = {
+                                            if (overlayOk) {
+                                                screen = Screen.SETTINGS
+                                            } else {
+                                                openOverlaySettings(ctx)
+                                            }
+                                        },
                                     ),
                                 ),
                                 stats = statsRows.take(4).mapIndexed { index, row ->
@@ -371,6 +383,14 @@ private fun AppRoot(debugScreen: String? = null) {
                                     darkOverride = index
                                     AppSettings.setDarkModeOverride(ctx, index)
                                 },
+                                floatingBallEnabled = floatingBallOn,
+                                floatingBallAvailable = overlayOk,
+                                onFloatingBallChange = { on ->
+                                    AppSettings.setFloatingBallEnabled(ctx, on)
+                                    floatingBallOn = on
+                                    FloatingBallService.refresh(ctx)
+                                },
+                                onRequestOverlay = { openOverlaySettings(ctx) },
                                 devLogEnabled = devLogEnabled,
                                 onDevLogToggle = { on ->
                                     DevLog.setEnabled(ctx, on)
@@ -383,7 +403,10 @@ private fun AppRoot(debugScreen: String? = null) {
                                     AppSettings.setAutoContinueEnabled(ctx, true)
                                     AppSettings.setAdSkipEnabled(ctx, true)
                                     AppSettings.setDarkModeOverride(ctx, 0)
+                                    AppSettings.setFloatingBallEnabled(ctx, true)
                                     darkOverride = 0
+                                    floatingBallOn = true
+                                    FloatingBallService.refresh(ctx)
                                     toast(ctx, "已恢复默认设置")
                                 },
                             )
