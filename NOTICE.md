@@ -16,7 +16,7 @@ ad-auto 的实现之后重写的，以下内容直接源自该项目：
 | 必须开启 `flagIncludeNotImportantViews`，否则广告 SDK 浮层在节点树不可见 | `app/src/main/res/xml/accessibility_service_config.xml` |
 | 3 秒看门狗轮询（静止广告没有事件） | `DramaDetector.WATCHDOG_MS` / `startWatchdog()` |
 | 遍历 `service.windows` 而非仅 `rootInActiveWindow` | `DramaDetector.collectFromAllWindows()` |
-| 稀疏树兜底 + 800ms 持久性确认 | `DramaDetector.SPARSE_AD_CONFIRM_MS`、`rules/official.json` 的 `sparse-fallback` |
+| 稀疏树兜底 + 800ms 持久性确认 | `DramaDetector.SPARSE_AD_CONFIRM_MS`、`rules/com.phoenix.read.json` 的 `sparse-fallback` |
 | 倒计时窗口内不动作 | `DramaDetector.withinCountdownWindow()`、`interstitial-countdown` 规则 |
 | 橙色 CTA 视觉兜底的几何判据（颜色纯度不可用作判据） | `DramaDetector` 的橙色块计算 |
 | 横屏读不到文字时只点按钮、不滑动 | `DramaRules` 横屏分支、`docs/rules-schema.md` 第 6 节 |

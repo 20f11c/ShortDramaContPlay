@@ -46,6 +46,7 @@ fun SubscribeDetailScreen(
     onToggle: (Boolean) -> Unit,
     onAutoUpdateChange: (Boolean) -> Unit,
     onCheckNow: () -> Unit,
+    onEdit: () -> Unit,
     onRollback: () -> Unit,
     onRemove: () -> Unit,
 ) {
@@ -147,6 +148,8 @@ fun SubscribeDetailScreen(
                 value = if (checking) "检查中…" else null,
                 onClick = { if (!checking) onCheckNow() },
             )
+            IosDivider()
+            IosRow(title = "编辑订阅地址", subtitle = "规则文件改名后在这里改 URL", onClick = onEdit)
             IosDivider()
             IosRow(title = "回滚到上一版本", onClick = onRollback)
             IosDivider()

@@ -48,6 +48,7 @@ fun AddSubscribeSheet(
     error: String?,
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
+    isEdit: Boolean = false,
 ) {
     if (!visible) return
     val t = LocalTokens.current
@@ -87,7 +88,7 @@ fun AddSubscribeSheet(
             )
             Spacer(Modifier.height(18.dp))
             Text(
-                text = "添加订阅",
+                text = if (isEdit) "编辑订阅" else "添加订阅",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = t.text,
@@ -140,7 +141,7 @@ fun AddSubscribeSheet(
                 )
                 Spacer(Modifier.width(12.dp))
                 SheetButton(
-                    text = "添加",
+                    text = if (isEdit) "保存" else "添加",
                     filled = true,
                     modifier = Modifier.weight(1f),
                     onClick = onConfirm,

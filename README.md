@@ -36,8 +36,8 @@ AccessibilityService（AutoPlayAccessibilityService）
 规则是**数据**，不是代码：App 按 URL 拉取 JSON 规则包，校验后缓存生效，失败沿用上次缓存并回退到内置兜底。
 
 - 规则格式：[docs/rules-schema.md](docs/rules-schema.md)
-- 官方规则包：[rules/official.json](rules/official.json)（红果免费短剧，8 条规则）
-- 默认订阅源：`cdn.jsdelivr.net/gh/20f11c/ShortDramaContPlay@main/rules/official.json`
+- 官方规则包：[rules/com.phoenix.read.json](rules/com.phoenix.read.json)（红果免费短剧，8 条规则）
+- 默认订阅源：`cdn.jsdelivr.net/gh/20f11c/ShortDramaContPlay@main/rules/com.phoenix.read.json`
   （主 jsDelivr、备 GitHub raw；国内 raw 基本不可达）
 
 三方可以自己写规则包，只要符合 [docs/rules-schema.md](docs/rules-schema.md)，在 App「订阅 → 添加订阅」里填 URL 即可。**第三方源无需签名**。

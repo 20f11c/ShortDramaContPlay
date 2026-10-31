@@ -18,17 +18,18 @@ import java.net.URL
  */
 object RuleStore {
 
-    const val OFFICIAL_ID = "official"
+    /** 一个规则包只服务一个 App，所以 id 直接用包名，文件名也一样（rules/<包名>.json）。 */
+    const val OFFICIAL_ID = "com.phoenix.read"
     const val OFFICIAL_URL_PRIMARY =
-        "https://cdn.jsdelivr.net/gh/20f11c/ShortDramaContPlay@main/rules/official.json"
+        "https://cdn.jsdelivr.net/gh/20f11c/ShortDramaContPlay@main/rules/com.phoenix.read.json"
     const val OFFICIAL_URL_FALLBACK =
-        "https://raw.githubusercontent.com/20f11c/ShortDramaContPlay/main/rules/official.json"
+        "https://raw.githubusercontent.com/20f11c/ShortDramaContPlay/main/rules/com.phoenix.read.json"
 
     /** 只有这个前缀才回退到 raw：换别的镜像等于替用户猜地址。 */
     private const val OFFICIAL_CDN_PREFIX = "https://cdn.jsdelivr.net/gh/20f11c/ShortDramaContPlay"
 
     private const val CACHE_DIR = "rules"
-    private const val BUILT_IN_PATH = "rules/official.json"
+    private const val BUILT_IN_PATH = "rules/com.phoenix.read.json"
     private const val META_SUFFIX = ".meta"
     private const val MAX_BYTES = 256 * 1024
     private const val MAX_RULES = 200
@@ -48,7 +49,7 @@ object RuleStore {
     fun parse(raw: String): RulePackage? = parsePackage(raw)
 
     /**
-     * 打包进 APK 的内置规则（`assets/rules/official.json`）。
+     * 打包进 APK 的内置规则（`assets/rules/com.phoenix.read.json`）。
      *
      * 存在的意义是「第一次装上、还没联网」时也能立刻跑起来：没有它，
      * 首启拉不到规则就是完全静止，用户只会觉得这 App 坏了。

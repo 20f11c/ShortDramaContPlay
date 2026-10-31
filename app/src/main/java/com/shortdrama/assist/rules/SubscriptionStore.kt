@@ -16,6 +16,9 @@ object SubscriptionStore {
     private const val KEY_SUBS = "subscriptions"
     private const val KEY_SEEDED = "seeded"
 
+    /** 早期版本官方源的 id；只在读取旧数据时用于迁移。 */
+    private const val LEGACY_OFFICIAL_ID = "official"
+
     private fun prefs(ctx: Context) =
         ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -27,8 +30,20 @@ object SubscriptionStore {
         for (i in 0 until arr.length()) {
             arr.optJSONObject(i)?.let { obj -> toSubscription(obj)?.let { list += it } }
         }
+        // 老版本官方源 id 是 "official"，升级后统一成包名，否则同一条规则会变成两条。
+        val migrated = list.map {
+            if (it.id == LEGACY_OFFICIAL_ID) {
+                it.copy(
+                    id = RuleStore.OFFICIAL_ID,
+                    url = RuleStore.OFFICIAL_URL_PRIMARY,
+                    name = "红果免费短剧",
+                )
+            } else {
+                it
+            }
+        }
         // 数组里有东西但一条都解不出来 = 数据被写坏了，同样退回默认值。
-        if (list.isEmpty() && arr.length() > 0) listOf(defaults()) else list
+        if (migrated.isEmpty() && arr.length() > 0) listOf(defaults()) else migrated
     }.getOrElse { listOf(defaults()) }
 
     fun save(ctx: Context, list: List<RuleSubscription>) {
@@ -39,9 +54,9 @@ object SubscriptionStore {
         }
     }
 
-    /** 官方源。id 固定为 "official"，UI 靠它认「这条不能删」。 */
+    /** 官方源。id 用包名，与规则文件名一致；UI 靠它认「这条是内置的」。 */
     fun defaults(): RuleSubscription = RuleSubscription(
-        id = "official",
+        id = RuleStore.OFFICIAL_ID,
         url = RuleStore.OFFICIAL_URL_PRIMARY,
         name = "红果免费短剧",
         enabled = true,

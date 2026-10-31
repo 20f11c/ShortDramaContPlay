@@ -142,6 +142,7 @@ private fun AppRoot(debugScreen: String? = null) {
         var checkingAll by remember { mutableStateOf(false) }
         var checkingOne by remember { mutableStateOf(false) }
         var showAddSheet by remember { mutableStateOf(false) }
+        var editingSubId by remember { mutableStateOf<String?>(null) }
         var addUrl by remember { mutableStateOf("") }
         var addError by remember { mutableStateOf<String?>(null) }
         var statsTick by remember { mutableIntStateOf(0) }
@@ -286,6 +287,7 @@ private fun AppRoot(debugScreen: String? = null) {
                                     }
                                 },
                                 onAdd = {
+                                    editingSubId = null
                                     addUrl = ""
                                     addError = null
                                     showAddSheet = true
@@ -336,6 +338,12 @@ private fun AppRoot(debugScreen: String? = null) {
                                                 )
                                                 checkingOne = false
                                             }
+                                        },
+                                        onEdit = {
+                                            editingSubId = sub.id
+                                            addUrl = sub.url
+                                            addError = null
+                                            showAddSheet = true
                                         },
                                         onRollback = {
                                             toast(ctx, "上一版本暂未保留")
@@ -417,16 +425,40 @@ private fun AppRoot(debugScreen: String? = null) {
 
             AddSubscribeSheet(
                 visible = showAddSheet,
+                isEdit = editingSubId != null,
                 url = addUrl,
                 onUrlChange = { addUrl = it; addError = null },
                 error = addError,
-                onCancel = { showAddSheet = false },
+                onCancel = {
+                    showAddSheet = false
+                    editingSubId = null
+                },
                 onConfirm = {
                     val trimmed = addUrl.trim()
+                    val editing = editingSubId
                     if (!trimmed.startsWith("https://")) {
                         addError = "只支持 https:// 地址"
-                    } else if (subscriptions.any { it.url == trimmed }) {
+                    } else if (subscriptions.any { it.url == trimmed && it.id != editing }) {
                         addError = "这个地址已经添加过"
+                    } else if (editing != null) {
+                        // 改地址：清掉旧缓存，按新地址重新拉；没拉到的先沿用旧规则，不打断使用。
+                        val old = subscriptions.firstOrNull { it.id == editing }
+                        val renamed = old != null && old.name == hostNameOf(old.url)
+                        val updated = old!!.copy(
+                            url = trimmed,
+                            name = if (renamed) hostNameOf(trimmed) else old.name,
+                            lastError = null,
+                        )
+                        RuleStore.clearCache(ctx, editing)
+                        scope.launch {
+                            val list = withContext(Dispatchers.IO) {
+                                SubscriptionStore.upsert(ctx, updated)
+                            }
+                            val fetched = refresh(updated)
+                            persist(list.map { if (it.id == editing) fetched else it })
+                            showAddSheet = false
+                            editingSubId = null
+                        }
                     } else {
                         val sub = RuleSubscription(
                             id = "sub-" + System.currentTimeMillis().toString(36),
@@ -446,7 +478,10 @@ private fun AppRoot(debugScreen: String? = null) {
                 },
             )
 
-            BackHandler(enabled = showAddSheet) { showAddSheet = false }
+            BackHandler(enabled = showAddSheet) {
+                showAddSheet = false
+                editingSubId = null
+            }
             BackHandler(enabled = !showAddSheet && screen != Screen.HOME) {
                 screen = when (screen) {
                     Screen.SUBSCRIBE_DETAIL -> Screen.SUBSCRIBE
