@@ -68,6 +68,12 @@ class MainActivity : ComponentActivity() {
         val debugScreen = intent?.getStringExtra(EXTRA_SCREEN)
         setContent { AppRoot(debugScreen) }
     }
+
+    override fun onResume() {
+        super.onResume()
+        // 悬浮日志是看红果时用的，回到自己界面立刻收掉，别挡设置页/日志页
+        DevLogOverlay.hide()
+    }
 }
 
 private const val EXTRA_SCREEN = "screen"
@@ -418,10 +424,23 @@ private fun AppRoot(debugScreen: String? = null) {
                                     devLogEnabled = on
                                 },
                                 onCopy = {
-                                    copyToClipboard(ctx, DevLog.exportText(ctx))
-                                    toast(ctx, "开发者日志已复制")
+                                    // 导出要读几千行数据库，别压在主线程上
+                                    scope.launch {
+                                        val text = withContext(Dispatchers.IO) {
+                                            DevLog.exportText(ctx)
+                                        }
+                                        copyToClipboard(ctx, text)
+                                        toast(ctx, "开发者日志已复制")
+                                    }
                                 },
-                                onShare = { DevLog.share(ctx) },
+                                onShare = {
+                                    scope.launch {
+                                        val text = withContext(Dispatchers.IO) {
+                                            DevLog.exportText(ctx)
+                                        }
+                                        DevLog.shareText(ctx, text)
+                                    }
+                                },
                                 onClear = {
                                     DevLog.clear()
                                     toast(ctx, "开发者日志已清空")

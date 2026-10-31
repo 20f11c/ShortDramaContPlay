@@ -5,8 +5,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.shortdrama.assist.DevLog
 import com.shortdrama.assist.ui.components.IosDivider
 import com.shortdrama.assist.ui.components.IosFootnote
 import com.shortdrama.assist.ui.components.IosGroup
@@ -16,6 +23,9 @@ import com.shortdrama.assist.ui.components.IosSectionTitle
 import com.shortdrama.assist.ui.components.IosSegmented
 import com.shortdrama.assist.ui.components.IosSwitch
 import com.shortdrama.assist.ui.theme.LocalTokens
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 /**
  * 设置页只放"偏好"。
@@ -39,6 +49,15 @@ fun SettingsScreen(
     onResetDefaults: () -> Unit,
 ) {
     val t = LocalTokens.current
+    val context = LocalContext.current
+    // 日志条数来自数据库，随写随变；这里 2 秒刷一次足够，别每次都查主线程
+    var logCount by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(devLogEnabled) {
+        while (true) {
+            logCount = withContext(Dispatchers.IO) { DevLog.rowCount() }
+            delay(2_000)
+        }
+    }
     IosPage(title = "设置") {
         IosSectionTitle("外观")
         // iOS 的分段控件永远躺在一张白卡里，否则选中块的边界会消失在页面底色上
@@ -81,13 +100,18 @@ fun SettingsScreen(
         IosGroup {
             IosRow(
                 title = "开发者日志",
+                subtitle = "写入本机 SQLite，重启不丢",
                 chevron = false,
                 trailing = {
                     IosSwitch(checked = devLogEnabled, onCheckedChange = onDevLogToggle)
                 },
             )
             IosDivider()
-            IosRow(title = "查看运行日志", onClick = onOpenDevLog)
+            IosRow(
+                title = "查看运行日志",
+                value = if (logCount > 0) "$logCount 条" else null,
+                onClick = onOpenDevLog,
+            )
         }
 
         IosSectionTitle("其他")

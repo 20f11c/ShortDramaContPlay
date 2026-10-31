@@ -90,6 +90,9 @@ class AutoPlayAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
+        // 无障碍服务可能先于界面被系统拉起，这里也要初始化，否则「开发者日志」开关读不到、
+        // 规则命中的日志就只进 logcat 不入库。
+        DevLog.init(this)
         A11yState.connected = true
         A11yState.status = "已连接，监听中"
         detector = DramaDetector(this)

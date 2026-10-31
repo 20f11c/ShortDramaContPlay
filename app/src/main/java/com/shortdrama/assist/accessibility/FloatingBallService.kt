@@ -31,6 +31,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import com.shortdrama.assist.AppSettings
+import com.shortdrama.assist.DevLog
+import com.shortdrama.assist.DevLogOverlay
 import com.shortdrama.assist.MainActivity
 import com.shortdrama.assist.rules.TargetApps
 import kotlin.math.abs
@@ -85,6 +87,9 @@ class FloatingBallService : Service() {
             if (pkg == foregroundPackage) return
             Log.i(TAG, "noteForeground $foregroundPackage -> $pkg svc=${instance != null}")
             foregroundPackage = pkg
+            // 悬浮日志是给「看红果时排查」用的，回到本 App 自己身上就该让开，
+            // 否则那条黑条会挡住设置页/日志页的顶部。
+            DevLogOverlay.sync(context)
             val svc = instance ?: return
             svc.handler.removeCallbacks(svc.syncBallTask)
             // 露出要快（进红果立刻能看到），收起稍慢一点，避免输入法/系统弹窗抢一次前台就收起。
@@ -139,6 +144,7 @@ class FloatingBallService : Service() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        DevLog.init(this)
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         createNotificationChannel()
         try {
