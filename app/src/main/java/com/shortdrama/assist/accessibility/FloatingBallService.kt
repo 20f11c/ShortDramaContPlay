@@ -32,8 +32,7 @@ import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import com.shortdrama.assist.AppSettings
 import com.shortdrama.assist.MainActivity
-import com.shortdrama.assist.rules.RuleStore
-import com.shortdrama.assist.rules.SubscriptionStore
+import com.shortdrama.assist.rules.TargetApps
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -60,6 +59,38 @@ class FloatingBallService : Service() {
         @Volatile
         var instance: FloatingBallService? = null
             private set
+
+        /** 当前前台包名；由无障碍服务在每次窗口事件里喂进来。 */
+        @Volatile
+        private var foregroundPackage: String? = null
+
+        fun currentForeground(): String? = foregroundPackage
+
+        /**
+         * 无障碍服务收到窗口事件时调用。
+         *
+         * 球只在「规则对应的 App」在前台时露头：离开红果（回桌面、进本 App、切别的 App）
+         * 就收起来，避免在无关界面上一颗球挡着、也避免滑动误触。
+         */
+        /**
+         * 无障碍服务收到窗口切换时调用。
+         *
+         * 球只在「规则对应的 App」在前台时露头：离开红果（回桌面、进本 App、切别的 App）
+         * 就收起来，避免在无关界面上一颗球挡着、也避免滑动误触。
+         *
+         * 注意必须**防抖**：一次页面切换会连着来好几条事件（内容变化、弹窗、输入法窗口），
+         * 前台包名在目标/非目标之间来回抖，直接响应会让球疯狂显隐。
+         */
+        fun noteForeground(context: Context, pkg: String?) {
+            if (pkg == foregroundPackage) return
+            Log.i(TAG, "noteForeground $foregroundPackage -> $pkg svc=${instance != null}")
+            foregroundPackage = pkg
+            val svc = instance ?: return
+            svc.handler.removeCallbacks(svc.syncBallTask)
+            // 露出要快（进红果立刻能看到），收起稍慢一点，避免输入法/系统弹窗抢一次前台就收起。
+            val delay = if (TargetApps.isTarget(context, pkg)) 250L else 500L
+            svc.handler.postDelayed(svc.syncBallTask, delay)
+        }
 
         fun start(context: Context) {
             val intent = Intent(context, FloatingBallService::class.java)
@@ -96,6 +127,9 @@ class FloatingBallService : Service() {
 
     private val handler by lazy { android.os.Handler(android.os.Looper.getMainLooper()) }
 
+    /** 前台切换后的延迟同步：把一串抖动事件收敛成一次显隐。 */
+    private val syncBallTask = Runnable { syncBall() }
+
     /** 菜单没人管就自己收起来，别一直挂在屏幕上挡画面。 */
     private val menuTimeout = Runnable {
         hideMenu()
@@ -128,10 +162,18 @@ class FloatingBallService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    /** 球该不该显示，只看「设置里开着」+「悬浮窗权限给了」。 */
+    /**
+     * 球该不该显示，四个条件缺一不可：
+     * ① 设置里开着；② 悬浮窗权限给了；③ 无障碍服务真的连着（不然规则跑不了，球只是块挡板）；
+     * ④ 当前前台是规则对应的 App。
+     */
     private fun syncBall() {
-        val want = AppSettings.isFloatingBallEnabled(this) && Settings.canDrawOverlays(this)
+        val want = AppSettings.isFloatingBallEnabled(this) &&
+            Settings.canDrawOverlays(this) &&
+            A11yState.connected &&
+            TargetApps.isTarget(this, foregroundPackage)
         val has = ball != null
+        Log.i(TAG, "syncBall want=$want has=$has fg=$foregroundPackage a11y=${A11yState.connected}")
         if (want && !has) {
             addBall()
         } else if (!want && has) {
@@ -143,6 +185,7 @@ class FloatingBallService : Service() {
 
     private fun addBall() {
         if (ball != null) return
+        Log.i(TAG, "addBall fg=$foregroundPackage")
         val size = dp(44)
         val p = WindowManager.LayoutParams(
             size,
@@ -188,6 +231,7 @@ class FloatingBallService : Service() {
     private fun removeBall() {
         hideMenu()
         val view = ball ?: return
+        Log.i(TAG, "removeBall fg=$foregroundPackage")
         runCatching { windowManager.removeView(view) }
         ball = null
         params = null
@@ -297,17 +341,16 @@ class FloatingBallService : Service() {
 
     private fun menuRowHeight(): Int = dp(46)
 
-    /** 菜单要操作的 App：取第一个启用的订阅（订阅 id 就是目标包名）。 */
-    private fun targetPackage(): String? {
-        val sub = SubscriptionStore.load(this).firstOrNull { it.enabled } ?: return null
-        val pkg = RuleStore.cached(this, sub.id)?.packageName
-            ?: RuleStore.builtIn(this)?.packageName
-            ?: sub.id
-        return pkg.takeIf { it.contains(".") }
-    }
+    /**
+     * 菜单里「打开 xxx」的目标：前台就是某个规则 App 就打开它，
+     * 否则退到第一个启用的订阅。包名/应用名都从规则解析（见 [TargetApps]）。
+     */
+    private fun menuTarget(): TargetApps.Target? =
+        TargetApps.primary(this, foregroundPackage)
 
     private fun openTargetApp() {
-        val pkg = targetPackage() ?: return
+        val target = menuTarget() ?: return
+        val pkg = target.packageName ?: return
         val intent = packageManager.getLaunchIntentForPackage(pkg) ?: return
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         runCatching { startActivity(intent) }
@@ -391,15 +434,10 @@ class FloatingBallService : Service() {
     /** 菜单行：一行一个动作，开关类直接把当前值写在右边。 */
     private fun buildMenuRows(): List<View> {
         val rows = mutableListOf<View>()
-        val pkg = targetPackage()
-        val appName = pkg?.let {
-            runCatching {
-                packageManager.getApplicationInfo(it, 0).loadLabel(packageManager).toString()
-            }.getOrNull()
-        }
+        val target = menuTarget()
 
-        if (pkg != null) {
-            rows += menuRow(if (appName.isNullOrBlank()) "打开应用" else "打开$appName", null) {
+        if (target != null) {
+            rows += menuRow("打开${target.label}", null) {
                 hideMenu()
                 openTargetApp()
             }
