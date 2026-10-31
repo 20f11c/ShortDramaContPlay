@@ -260,6 +260,7 @@ private fun AppRoot(debugScreen: String? = null) {
                                 stats = statsRows.take(4).mapIndexed { index, row ->
                                     StatItem(
                                         label = row.label,
+                                        packageName = row.packageName,
                                         short = row.label.take(1),
                                         count = row.count,
                                         color = STAT_COLORS[index % STAT_COLORS.size],

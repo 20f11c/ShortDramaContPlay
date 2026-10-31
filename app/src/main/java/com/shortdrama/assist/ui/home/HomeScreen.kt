@@ -1,5 +1,6 @@
 package com.shortdrama.assist.ui.home
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -29,6 +31,7 @@ import com.shortdrama.assist.ui.components.IosPage
 import com.shortdrama.assist.ui.components.IosRow
 import com.shortdrama.assist.ui.components.IosSectionTitle
 import com.shortdrama.assist.ui.components.IosSwitch
+import com.shortdrama.assist.ui.components.rememberAppIcon
 import com.shortdrama.assist.ui.theme.LocalTokens
 
 /** 运行状态里的一行：客观事实，用户改不了，点进去是去修它。 */
@@ -44,7 +47,9 @@ data class PermissionRow(
 /** 续播统计里的一个应用。 */
 data class StatItem(
     val label: String,
-    /** 图标里那个字，1 个字最好看。 */
+    /** 目标 App 的包名，用来取真实桌面图标。 */
+    val packageName: String,
+    /** 取不到图标时的兜底字，1 个字最好看。 */
     val short: String,
     val count: Int,
     val color: Color,
@@ -206,20 +211,11 @@ private fun StatCell(item: StatItem) {
         modifier = Modifier.width(74.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(11.dp))
-                .background(item.color),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = item.short,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-            )
-        }
+        AppIconTile(
+            packageName = item.packageName,
+            short = item.short,
+            fallbackColor = item.color,
+        )
         Spacer(Modifier.height(7.dp))
         Text(
             text = "${item.count} 次",
@@ -235,5 +231,45 @@ private fun StatCell(item: StatItem) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+    }
+}
+
+/**
+ * 40dp 圆角图标块：优先画目标 App 的真实图标，拿不到才退回「纯色块 + 一个字」。
+ *
+ * 用 `rememberAppIcon` 而不是在这里直接调 PackageManager —— 它内部按包名缓存并在 IO 线程解析，
+ * 不会被首页每秒一次的 tick 反复触发。
+ */
+@Composable
+private fun AppIconTile(
+    packageName: String,
+    short: String,
+    fallbackColor: Color,
+) {
+    val density = LocalDensity.current
+    val sizePx = with(density) { 40.dp.roundToPx() }
+    val icon = rememberAppIcon(packageName, sizePx)
+
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(RoundedCornerShape(11.dp))
+            .background(if (icon == null) fallbackColor else Color.Transparent),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (icon != null) {
+            Image(
+                bitmap = icon,
+                contentDescription = null,
+                modifier = Modifier.size(40.dp),
+            )
+        } else {
+            Text(
+                text = short,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+            )
+        }
     }
 }
