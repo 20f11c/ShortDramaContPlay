@@ -17,6 +17,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PixelFormat
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
@@ -26,9 +27,13 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import com.shortdrama.assist.AppSettings
 import com.shortdrama.assist.MainActivity
+import com.shortdrama.assist.rules.RuleStore
+import com.shortdrama.assist.rules.SubscriptionStore
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -79,6 +84,21 @@ class FloatingBallService : Service() {
     private lateinit var windowManager: WindowManager
     private var ball: BallView? = null
     private var params: WindowManager.LayoutParams? = null
+
+    /** 菜单窗口：点球才出现，不占常驻资源。 */
+    private var menu: View? = null
+    private var menuParams: WindowManager.LayoutParams? = null
+
+    /** 贴边后半隐藏状态：球只露出 [revealPx] 宽的一小条。 */
+    private var collapsed = false
+
+    private val handler by lazy { android.os.Handler(android.os.Looper.getMainLooper()) }
+
+    /** 菜单没人管就自己收起来，别一直挂在屏幕上挡画面。 */
+    private val menuTimeout = Runnable {
+        hideMenu()
+        collapse()
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -151,10 +171,14 @@ class FloatingBallService : Service() {
             windowManager.addView(view, p)
             ball = view
             params = p
+            // 一上来就贴边半隐藏：别让它整颗压在刚打开的播放页上
+            animateX(collapsedX())
+            collapsed = true
         }.onFailure { Log.w(TAG, "悬浮球添加失败: ${it.message}") }
     }
 
     private fun removeBall() {
+        hideMenu()
         val view = ball ?: return
         runCatching { windowManager.removeView(view) }
         ball = null
@@ -198,6 +222,243 @@ class FloatingBallService : Service() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
         runCatching { startActivity(intent) }
+    }
+
+    // ---------------------------------------------------------------- 贴边半隐藏
+
+    /** 半隐藏时露在外面的宽度：够点、又基本不挡画面。 */
+    private fun revealPx(): Int = dp(20)
+
+    private fun ballSize(): Int = dp(44)
+
+    private fun dockedRight(): Boolean {
+        val p = params ?: return true
+        return p.x + ballSize() / 2 >= screenWidth() / 2
+    }
+
+    private fun expandedX(): Int =
+        if (dockedRight()) (screenWidth() - ballSize() - dp(8)).coerceAtLeast(0) else dp(8)
+
+    /** 半隐藏：把窗口推到屏幕外，只留一小条弧边。窗口窄了触摸区域也跟着窄，不会误触。 */
+    private fun collapsedX(): Int =
+        if (dockedRight()) screenWidth() - revealPx() else revealPx() - ballSize()
+
+    private fun animateX(target: Int, onEnd: (() -> Unit)? = null) {
+        val p = params ?: return
+        val from = p.x
+        if (from == target) {
+            onEnd?.invoke()
+            return
+        }
+        ValueAnimator.ofInt(from, target).apply {
+            duration = 170
+            addUpdateListener {
+                p.x = it.animatedValue as Int
+                runCatching { windowManager.updateViewLayout(ball ?: return@addUpdateListener, p) }
+            }
+            if (onEnd != null) addListener(object : android.animation.AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: android.animation.Animator) = onEnd()
+            })
+            start()
+        }
+    }
+
+    /**
+     * 贴边后自动半隐藏。
+     *
+     * 目的是"存在但不碍事"：整颗球压在播放页右侧时会挡住点赞/分享那一列，
+     * 缩成一条边既不挡内容，又始终留着一个能点的入口。
+     */
+    private fun collapse() {
+        if (collapsed) return
+        collapsed = true
+        animateX(collapsedX())
+    }
+
+    private fun expand() {
+        if (!collapsed) return
+        collapsed = false
+        animateX(expandedX())
+    }
+
+    // ---------------------------------------------------------------- 菜单
+
+    private fun menuWidth(): Int = dp(158)
+
+    private fun menuRowHeight(): Int = dp(46)
+
+    /** 菜单要操作的 App：取第一个启用的订阅（订阅 id 就是目标包名）。 */
+    private fun targetPackage(): String? {
+        val sub = SubscriptionStore.load(this).firstOrNull { it.enabled } ?: return null
+        val pkg = RuleStore.cached(this, sub.id)?.packageName
+            ?: RuleStore.builtIn(this)?.packageName
+            ?: sub.id
+        return pkg.takeIf { it.contains(".") }
+    }
+
+    private fun openTargetApp() {
+        val pkg = targetPackage() ?: return
+        val intent = packageManager.getLaunchIntentForPackage(pkg) ?: return
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { startActivity(intent) }
+        collapse()
+    }
+
+    private fun toggleMenu() {
+        if (menu != null) {
+            hideMenu()
+            collapse()
+        } else {
+            expand()
+            showMenu()
+        }
+    }
+
+    private fun hideMenu() {
+        handler.removeCallbacks(menuTimeout)
+        val view = menu ?: return
+        runCatching { windowManager.removeView(view) }
+        menu = null
+        menuParams = null
+    }
+
+    private fun showMenu() {
+        hideMenu()
+        val rows = buildMenuRows()
+        // 行高 + 行间 1px 分隔线 + 上下内边距：窗口高度是固定值，算少了会把最后一行裁掉
+        val height = dp(12) + rows.size * menuRowHeight() + (rows.size - 1) + dp(4)
+        val w = menuWidth()
+        val p = WindowManager.LayoutParams(
+            w,
+            height,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                @Suppress("DEPRECATION")
+                WindowManager.LayoutParams.TYPE_PHONE
+            },
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            val ball = params
+            val onRight = dockedRight()
+            x = if (onRight) {
+                ((ball?.x ?: screenWidth()) - w - dp(8))
+            } else {
+                ((ball?.x ?: 0) + ballSize() + dp(8))
+            }.coerceIn(dp(4), (screenWidth() - w - dp(4)).coerceAtLeast(dp(4)))
+            val cy = (ball?.y ?: (screenHeight() / 2)) + ballSize() / 2
+            y = (cy - height / 2).coerceIn(dp(56), (screenHeight() - height - dp(96)).coerceAtLeast(dp(56)))
+        }
+
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(6), dp(6), dp(6), dp(6))
+            elevation = dp(8).toFloat()
+            background = GradientDrawable().apply {
+                cornerRadius = dp(16).toFloat()
+                setColor(0xF71C1C1E.toInt())
+                setStroke(dp(1), 0x26FFFFFF)
+            }
+        }
+        rows.forEachIndexed { index, row ->
+            card.addView(row)
+            if (index < rows.size - 1) card.addView(menuDivider())
+        }
+
+        runCatching {
+            windowManager.addView(card, p)
+            menu = card
+            menuParams = p
+            handler.removeCallbacks(menuTimeout)
+            handler.postDelayed(menuTimeout, 8_000)
+        }.onFailure { Log.w(TAG, "菜单添加失败: ${it.message}") }
+    }
+
+    /** 菜单行：一行一个动作，开关类直接把当前值写在右边。 */
+    private fun buildMenuRows(): List<View> {
+        val rows = mutableListOf<View>()
+        val pkg = targetPackage()
+        val appName = pkg?.let {
+            runCatching {
+                packageManager.getApplicationInfo(it, 0).loadLabel(packageManager).toString()
+            }.getOrNull()
+        }
+
+        if (pkg != null) {
+            rows += menuRow(if (appName.isNullOrBlank()) "打开应用" else "打开$appName", null) {
+                hideMenu()
+                openTargetApp()
+            }
+        }
+        rows += menuRow(
+            "自动续播",
+            if (AppSettings.isAutoContinueEnabled(this)) "已开" else "已关",
+        ) {
+            AppSettings.setAutoContinueEnabled(this, !AppSettings.isAutoContinueEnabled(this))
+            hideMenu()
+            showMenu()
+        }
+        rows += menuRow(
+            "广告跳过",
+            if (AppSettings.isAdSkipEnabled(this)) "已开" else "已关",
+        ) {
+            AppSettings.setAdSkipEnabled(this, !AppSettings.isAdSkipEnabled(this))
+            hideMenu()
+            showMenu()
+        }
+        rows += menuRow("打开设置", null) {
+            hideMenu()
+            collapse()
+            openApp()
+        }
+        rows += menuRow("隐藏悬浮球", null) {
+            hideMenu()
+            AppSettings.setFloatingBallEnabled(this, false)
+            syncBall()
+        }
+        return rows
+    }
+
+    private fun menuDivider(): View = View(this).apply {
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            1,
+        ).also { it.leftMargin = dp(12); it.rightMargin = dp(12) }
+        setBackgroundColor(0x1FFFFFFF)
+    }
+
+    private fun menuRow(label: String, hint: String?, onClick: () -> Unit): View {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(12), 0, dp(12), 0)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                menuRowHeight(),
+            )
+            isClickable = true
+            setOnClickListener { onClick() }
+        }
+        val title = TextView(this).apply {
+            text = label
+            setTextColor(Color.WHITE)
+            textSize = 13.5f
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        row.addView(title)
+        if (hint != null) {
+            val tail = TextView(this).apply {
+                text = hint
+                setTextColor(0xFF0A84FF.toInt())
+                textSize = 12f
+            }
+            row.addView(tail)
+        }
+        return row
     }
 
     /**
@@ -273,6 +534,9 @@ class FloatingBallService : Service() {
             val p = params ?: return false
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
+                    // 这里绝对不能移动窗口：半隐藏时窗口一旦弹回完整位置，同一次手势的
+                    // 相对坐标就整体偏了 96px，ACTION_MOVE 立刻判成拖拽，点击永远变拖拽。
+                    // 展开推迟到首次确认拖拽（见 ACTION_MOVE）。
                     downX = event.rawX
                     downY = event.rawY
                     startX = p.x
@@ -289,6 +553,16 @@ class FloatingBallService : Service() {
                     if (!dragging && (abs(dx) > touchSlop || abs(dy) > touchSlop)) {
                         dragging = true
                         removeCallbacks(longPressRunnable)
+                        hideMenu()
+                        // 确认是拖拽之后才从半隐藏位置弹回完整位置，并把起点重置到新位置，
+                        // 否则球会按「屏幕外起点」计算，拖起来发飘
+                        if (collapsed) {
+                            collapsed = false
+                            p.x = expandedX()
+                            startX = p.x
+                            startY = p.y
+                            runCatching { windowManager.updateViewLayout(this, p) }
+                        }
                     }
                     if (dragging) {
                         p.x = (startX + dx).toInt().coerceIn(0, max(0, screenWidth() - width))
@@ -318,23 +592,32 @@ class FloatingBallService : Service() {
         }
 
         override fun performClick(): Boolean {
-            openApp()
+            toggleMenu()
             return super.performClick()
         }
 
-        /** 松手后贴到最近那条竖直边，带一小段动画。 */
+        /** 松手后贴到最近那条竖直边，停稳再自动半隐藏。 */
         private fun snapToEdge() {
             val p = params ?: return
             val maxX = max(0, screenWidth() - width)
             val targetX = if (p.x + width / 2 < screenWidth() / 2) 0 else maxX
             val fromX = p.x
-            if (fromX == targetX) return
+            if (fromX == targetX) {
+                collapse()
+                return
+            }
             ValueAnimator.ofInt(fromX, targetX).apply {
                 duration = 160
                 addUpdateListener {
                     p.x = it.animatedValue as Int
                     runCatching { windowManager.updateViewLayout(this@BallView, p) }
                 }
+                addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        persist(p.x, p.y)
+                        collapse()
+                    }
+                })
                 start()
             }
         }
