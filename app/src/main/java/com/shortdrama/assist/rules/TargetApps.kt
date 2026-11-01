@@ -7,7 +7,7 @@ import android.content.pm.PackageManager
  * 订阅 → 目标 App 的解析层。
  *
  * 为什么要有这一层：订阅 id 只是本地主键（官方源是包名，用户自建的源可能是别的东西），
- * 真正决定「规则管哪个 App」的是规则包里的 `package` 字段。悬浮球要不要显示、
+ * 真正决定「规则管哪个 App」的是规则包里的 `package` 字段。悬浮日志要不要显示、
  * 菜单里「打开 xxx」打开谁，都必须走这里，而不是自己猜 id。
  */
 object TargetApps {

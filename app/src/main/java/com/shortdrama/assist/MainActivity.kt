@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import com.shortdrama.assist.accessibility.A11yState
 import com.shortdrama.assist.accessibility.AutoPlayAccessibilityService
-import com.shortdrama.assist.accessibility.FloatingBallService
 import com.shortdrama.assist.rules.RuleEngine
 import com.shortdrama.assist.rules.RulePackage
 import com.shortdrama.assist.rules.RuleStore
@@ -141,7 +140,6 @@ private fun AppRoot(debugScreen: String? = null) {
         val notificationsOk = remember(tick) {
             NotificationManagerCompat.from(ctx).areNotificationsEnabled()
         }
-        val overlayOk = remember(tick) { Settings.canDrawOverlays(ctx) }
         val targetInstalled = remember(tick) { isInstalled(ctx, TARGET_PKG) }
 
         var subscriptions by remember { mutableStateOf<List<RuleSubscription>>(emptyList()) }
@@ -155,7 +153,6 @@ private fun AppRoot(debugScreen: String? = null) {
         var addError by remember { mutableStateOf<String?>(null) }
         var statsTick by remember { mutableIntStateOf(0) }
         var devLogEnabled by remember { mutableStateOf(DevLog.isEnabled(ctx)) }
-        var floatingBallOn by remember { mutableStateOf(AppSettings.isFloatingBallEnabled(ctx)) }
         val scope = rememberCoroutineScope()
 
         val enabledCount = subscriptions.count { it.enabled }
@@ -258,22 +255,6 @@ private fun AppRoot(debugScreen: String? = null) {
                                         value = if (notificationsOk) "已开启" else "未开启",
                                         granted = notificationsOk,
                                         onClick = { openNotificationSettings(ctx) },
-                                    ),
-                                    PermissionRow(
-                                        title = "悬浮球",
-                                        value = when {
-                                            !overlayOk -> "未授权"
-                                            floatingBallOn -> "显示中"
-                                            else -> "已关闭"
-                                        },
-                                        granted = overlayOk && floatingBallOn,
-                                        onClick = {
-                                            if (overlayOk) {
-                                                screen = Screen.SETTINGS
-                                            } else {
-                                                openOverlaySettings(ctx)
-                                            }
-                                        },
                                     ),
                                 ),
                                 stats = statsRows.take(4).mapIndexed { index, row ->
@@ -389,14 +370,6 @@ private fun AppRoot(debugScreen: String? = null) {
                                     darkOverride = index
                                     AppSettings.setDarkModeOverride(ctx, index)
                                 },
-                                floatingBallEnabled = floatingBallOn,
-                                floatingBallAvailable = overlayOk,
-                                onFloatingBallChange = { on ->
-                                    AppSettings.setFloatingBallEnabled(ctx, on)
-                                    floatingBallOn = on
-                                    FloatingBallService.refresh(ctx)
-                                },
-                                onRequestOverlay = { openOverlaySettings(ctx) },
                                 devLogEnabled = devLogEnabled,
                                 onDevLogToggle = { on ->
                                     DevLog.setEnabled(ctx, on)
@@ -409,10 +382,7 @@ private fun AppRoot(debugScreen: String? = null) {
                                     AppSettings.setAutoContinueEnabled(ctx, true)
                                     AppSettings.setAdSkipEnabled(ctx, true)
                                     AppSettings.setDarkModeOverride(ctx, 0)
-                                    AppSettings.setFloatingBallEnabled(ctx, true)
                                     darkOverride = 0
-                                    floatingBallOn = true
-                                    FloatingBallService.refresh(ctx)
                                     toast(ctx, "已恢复默认设置")
                                 },
                             )
@@ -610,13 +580,6 @@ private fun openNotificationSettings(ctx: Context) = runCatching {
         )
     }
 }
-
-private fun openOverlaySettings(ctx: Context) = runCatching {
-    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-        .setData(Uri.parse("package:${ctx.packageName}"))
-        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    ctx.startActivity(intent)
-}.onFailure { toast(ctx, "请到系统设置里允许「显示在其他应用上层」") }
 
 private fun copyToClipboard(ctx: Context, text: String) {
     val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager

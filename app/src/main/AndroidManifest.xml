@@ -52,7 +52,7 @@
 
         <!-- 前台服务保活：防止 MIUI/HyperOS 在后台挂起无障碍服务 -->
         <service
-            android:name=".accessibility.FloatingBallService"
+            android:name=".accessibility.KeepAliveService"
             android:exported="false"
             android:foregroundServiceType="specialUse"
             android:stopWithTask="false"

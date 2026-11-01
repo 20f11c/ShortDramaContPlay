@@ -37,10 +37,6 @@ import kotlinx.coroutines.withContext
 fun SettingsScreen(
     darkOverride: Int,
     onDarkOverrideChange: (Int) -> Unit,
-    floatingBallEnabled: Boolean,
-    floatingBallAvailable: Boolean,
-    onFloatingBallChange: (Boolean) -> Unit,
-    onRequestOverlay: () -> Unit,
     devLogEnabled: Boolean,
     onDevLogToggle: (Boolean) -> Unit,
     onOpenDevLog: () -> Unit,
@@ -67,31 +63,6 @@ fun SettingsScreen(
                     options = listOf("跟随系统", "浅色", "深色"),
                     selectedIndex = darkOverride.coerceIn(0, 2),
                     onSelect = onDarkOverrideChange,
-                )
-            }
-        }
-
-        IosSectionTitle("悬浮球")
-        IosGroup {
-            if (floatingBallAvailable) {
-                IosRow(
-                    title = "显示悬浮球",
-                    subtitle = "叠在红果上面，点一下回到这里",
-                    chevron = false,
-                    trailing = {
-                        IosSwitch(
-                            checked = floatingBallEnabled,
-                            onCheckedChange = onFloatingBallChange,
-                        )
-                    },
-                )
-            } else {
-                IosRow(
-                    title = "显示悬浮球",
-                    subtitle = "需要「显示在其他应用上层」权限",
-                    value = "去授权",
-                    valueColor = t.accent,
-                    onClick = onRequestOverlay,
                 )
             }
         }

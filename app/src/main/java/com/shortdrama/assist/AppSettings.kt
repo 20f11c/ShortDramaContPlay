@@ -11,7 +11,6 @@ object AppSettings {
     private const val KEY_A11Y_MODE = "accessibility_mode"
     private const val KEY_AD_SKIP = "ad_skip_enabled"
     private const val KEY_AUTO_CONTINUE = "auto_continue_enabled"
-    private const val KEY_FLOATING_BALL = "floating_ball_enabled"
 
     private fun prefs(ctx: Context) =
         ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -39,18 +38,6 @@ object AppSettings {
 
     fun setAutoContinueEnabled(ctx: Context, value: Boolean) {
         prefs(ctx).edit().putBoolean(KEY_AUTO_CONTINUE, value).apply()
-    }
-
-    /**
-     * 悬浮球。
-     *
-     * 这只是「要不要显示」的偏好；真正能不能显示还取决于系统有没有给悬浮窗权限，
-     * 所以界面上的权限状态与这里的开关是两回事。
-     */
-    fun isFloatingBallEnabled(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_FLOATING_BALL, true)
-
-    fun setFloatingBallEnabled(ctx: Context, value: Boolean) {
-        prefs(ctx).edit().putBoolean(KEY_FLOATING_BALL, value).apply()
     }
 
     // === 外观 ===

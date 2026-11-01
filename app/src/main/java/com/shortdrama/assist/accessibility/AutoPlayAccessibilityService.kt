@@ -100,7 +100,7 @@ class AutoPlayAccessibilityService : AccessibilityService() {
         detector?.startWatchdog()
         // 前台服务保活：没有前台服务时 App 在后台会被 MIUI/HyperOS 挂起
         try {
-            FloatingBallService.start(this)
+            KeepAliveService.start(this)
         } catch (t: Throwable) {
             Log.w(TAG, "拉起前台服务失败: $t")
         }
@@ -114,7 +114,7 @@ class AutoPlayAccessibilityService : AccessibilityService() {
 
     private val handler by lazy { android.os.Handler(android.os.Looper.getMainLooper()) }
 
-    /** 兜底轮询：把「当前真正在前台的包名」喂给悬浮球判定。 */
+    /** 兜底轮询：把「当前真正在前台的包名」喂给前台追踪（悬浮日志靠它判显隐）。 */
     private val syncTicker = object : Runnable {
         override fun run() {
             val pkg = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()
@@ -123,7 +123,7 @@ class AutoPlayAccessibilityService : AccessibilityService() {
             // 轮询里必须忽略它，否则球一出现就把自己判成非目标 App，然后立刻收起 → 疯狂闪烁。
             // 用户真的切到本 App 时由窗口切换事件负责隐藏，不靠这个轮询。
             if (pkg != null && pkg != packageName) {
-                FloatingBallService.noteForeground(this@AutoPlayAccessibilityService, pkg)
+                KeepAliveService.noteForeground(this@AutoPlayAccessibilityService, pkg)
             }
             handler.postDelayed(this, 2000L)
         }
@@ -131,7 +131,7 @@ class AutoPlayAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         event ?: return
-        // 悬浮球只在规则对应的 App 前台时露头：这里把窗口切换的包名喂过去。
+        // 记住前台包名：悬浮日志只在规则对应的 App 上露头，这里把窗口切换喂过去。
         // 只认 TYPE_WINDOW_STATE_CHANGED —— 内容变化事件量极大，且包名会在
         // 目标 App / 输入法 / 系统弹窗之间来回跳，跟着它走球会疯狂显隐。
         val pkg = event.packageName?.toString()
@@ -147,7 +147,7 @@ class AutoPlayAccessibilityService : AccessibilityService() {
             val ownActivity = pkg == packageName && className != null &&
                 className.startsWith(APP_PACKAGE_PREFIX)
             if (pkg != packageName || ownActivity) {
-                FloatingBallService.noteForeground(this, pkg)
+                KeepAliveService.noteForeground(this, pkg)
             }
         }
         detector?.onAccessibilityEvent(event)

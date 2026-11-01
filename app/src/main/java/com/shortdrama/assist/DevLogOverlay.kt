@@ -17,7 +17,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import com.shortdrama.assist.accessibility.FloatingBallService
+import com.shortdrama.assist.accessibility.KeepAliveService
 import com.shortdrama.assist.rules.TargetApps
 
 /**
@@ -51,7 +51,7 @@ object DevLogOverlay {
         appContext = app
         // 只在「规则对应的 App」（红果那类）上面挂：回到我们自己或桌面就收起来，
         // 否则这条黑条会挡住设置页/日志页的顶部，又没法关。
-        val fg = FloatingBallService.currentForeground()
+        val fg = KeepAliveService.currentForeground()
         if (fg == null || !TargetApps.isTarget(app, fg)) {
             hide()
             return
@@ -206,7 +206,7 @@ object DevLogOverlay {
         // 每秒顺手校验一次「前台还是不是目标 App」：用户一旦切走（回桌面/进我们自己），
         // 这里就把悬浮条收掉，不指望窗口事件一定送到。
         val app = appContext
-        val fg = FloatingBallService.currentForeground()
+        val fg = KeepAliveService.currentForeground()
         if (app == null || fg == null || !TargetApps.isTarget(app, fg)) {
             hide()
             return
